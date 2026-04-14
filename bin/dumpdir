@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Error Handling
+trap 'echo; echo "Interrupted."; exit 1' INT
+
+VERSION="0.2.1"
+IGNORE_DIRS='.git|node_modules|__pycache__|venv|env'
+
+show_version() {
+  echo "dumpdir $VERSION"
+}
+
+usage() {
+  show_version
+  cat <<'EOF'
+
+dumpdir - safe directory and file dump tool
+
+Usage:
+  dumpdir [PATH]
+  dumpdir --help
+  dumpdir --version
+
+Description:
+  Dumps a directory tree and contents of selected text files.
+EOF
+}
+
+main() {
+  local target="${1:-.}"
+
+  if [[ ! -d "$target" ]]; then
+    echo "Error: '$target' is not a directory"
+    exit 1
+  fi
+
+  cd "$target"
+
+  # Show directory tree
+  tree -a -I "$IGNORE_DIRS"
+  echo
+
+  # Dump files
+  rg --files \
+    -g '!.git/*' \
+    -g '!node_modules/*' \
+    -g '!__pycache__/*' \
+    -g '!venv/*' \
+    -g '!env/*' \
+    -g '!.env*' \
+    -g '!*.key' \
+    -g '!*.pem' \
+    -g '!*.crt' \
+    -g '!*.p12' \
+    -g '!*.pfx' \
+    -g '!id_rsa*' \
+    -g '!id_ed25519*' \
+    -g '!*.sqlite' \
+    -g '!*.db' \
+    -g '*.sh' \
+    -g '*.py' \
+    -g '*.md' \
+    -g '*.txt' \
+    -g '*.json' \
+    -g '*.yaml' \
+    -g '*.yml' \
+    -g '*.toml' \
+    -g '*.conf' \
+    -g '*.cfg' |
+  while read -r file; do
+
+    # skip large files (>200KB)
+    size=$(stat -c%s "$file" 2>/dev/null || stat -f%z "$file")
+    if [[ "$size" -gt 200000 ]]; then
+      continue
+    fi
+
+    # only dump text files
+    if file "$file" | grep -qi text; then
+      echo "===== $file ====="
+      cat "$file"
+      echo
+    fi
+
+  done
+}
+
+# argument parsing
+case "${1:-}" in
+  --help|-h)
+    usage
+    exit 0
+    ;;
+  --version|-v)
+    show_version
+    exit 0
+    ;;
+esac
+
+main "${1:-}"
