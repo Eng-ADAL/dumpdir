@@ -50,6 +50,7 @@ main() {
     -g '!env/*' \
     -g '!.env*' \
     -g '!*.key' \
+    -g '!*.kdbx' \
     -g '!*.pem' \
     -g '!*.crt' \
     -g '!*.p12' \
@@ -57,17 +58,7 @@ main() {
     -g '!id_rsa*' \
     -g '!id_ed25519*' \
     -g '!*.sqlite' \
-    -g '!*.db' \
-    -g '*.sh' \
-    -g '*.py' \
-    -g '*.md' \
-    -g '*.txt' \
-    -g '*.json' \
-    -g '*.yaml' \
-    -g '*.yml' \
-    -g '*.toml' \
-    -g '*.conf' \
-    -g '*.cfg' |
+    -g '!*.db' |
   while read -r file; do
 
     # skip large files (>200KB)
@@ -77,8 +68,9 @@ main() {
     fi
 
     # only dump text files
-    if file "$file" | grep -qi text; then
-      echo "===== $file ====="
+    if file --mime "$file" | grep -qi 'text'; then
+        rel_path="${file#./}"
+        echo "===== $rel_path ====="
       cat "$file"
       echo
     fi
